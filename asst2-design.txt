@@ -1,1 +1,104 @@
 Add your design document in here.
+
+What significant data structures have you added and what function do they perform?
+
+In file.h,
+
+struct f {
+    struct vnode *fv;
+    int flag;
+    off_t offset;
+};
+
+This is file struct. It enabled the open file table implemented in file.h to approach specific file and its behaviours,
+ such as its link to vnode, flag and offset.
+
+struct f OF_table[OPEN_MAX];
+
+This is global open file table implemented in file.h.
+This open file table is shared between process and process's file descriptor table.
+This structure makes functions implemented in file.h to approach to files much easier.
+
+In proc.h,
+
+struct proc {
+    '''
+    //File descriptor table
+    int FD_table[OPEN_MAX];
+}
+
+In the process, I implemented file descriptor table, FD_table.
+The file descriptor table can points to Open file table.
+This feature enable the functions implemented in file.h to approach to the files much easier.
+File descriptor table is initialized in main.c.
+
+
+What are any significant issues surround managing the data structures and state do they contain?
+My global open file table is not synchronized. This will cause race condition when accessing file tables.
+
+
+What data structures are per-process and what structures are shared between processes?
+File descriptor table implemented in process structure is per-process.
+Global open file table and is shared between processes.
+
+
+What is the main issues related to transferring data to and from applications?
+I didn't implemeent any of lock, semaphores or monitors. 
+As of this, when accessing global open file table, it can cause race conditions.
+
+
+If fork() was implemented, what concurrency issues would be introduced to your implementation?
+I didn't implemeent any of lock, semaphores or monitors.
+Because of this, when fork() was implemented, a file, f, can be changed concurrently by processes.
+
+
+
+Implemted functions description.
+
+void OF_table_init(void);
+This is for initialization of open file table.
+This function will be called in main.c.
+
+
+int sys_open(const char *filename, int flags, mode_t mode);
+This function will open file by vfs_open() and if there is free space in file descriptor table, implement there.
+The error will be returned in the following situtaions:
+Given filename is not valid.
+There was error in vfs_open().
+If there was no free space in file descriptor table.
+
+
+int sys_close(int fd);
+This function close file by vfs_close(), clear allocated open file table and file descriptor table at its index.
+
+
+ssize_t sys_read(int fd, void *buf, size_t buflen);
+This function reads file by using VOP_READ().
+The error will be returned in the following situtaions:
+If given fd is not valid.
+There was an error during VOP_READ().
+
+
+
+ssize_t sys_write(int fd, const void *buf, size_t nbytes);
+This function reads file by using VOP_WRITE().
+The error will be returned in the following situtaions:
+If given fd is not valid.
+There was an error during VOP_WRITE().
+
+
+
+int sys_dup2(int oldfd, int newfd);
+First, check if oldfd is valid. If it's valid, The newfd will be points to where oldfd used to points to.
+The oldfd will be chnaged to unused.
+The error will be returned in the following situtaions:
+Oldfd given is not valid.
+
+
+
+off_t sys_lseek(int fd, off_t pos, int whence);
+The error will be returned in the following situtaions:
+If given fd is not valid.
+If there was error in VOP_STAT().
+If given whence is not valid.
+
